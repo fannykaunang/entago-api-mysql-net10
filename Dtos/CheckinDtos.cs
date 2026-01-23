@@ -40,6 +40,14 @@ public sealed class CheckinCreateRequest
     public int Work_Code { get; set; }
     public string Att_Id { get; set; } = "";
 
-    // Optional: kalau device mengirim scan_date sendiri. Kalau null, pakai waktu server
-    public DateTime? Scan_Date { get; set; }
+    // tambahan utk SP_INSERT_CHECKIN
+    public DateOnly? Tgl_Shift { get; set; }          // optional, kalau null -> pakai hari ini
+    public int Jdw_Kerja_M_Id { get; set; }
+    public int Jk_Id { get; set; }
+    public string Att_Id_In { get; set; } = "";       // bisa sama dengan Att_Id kalau kamu belum punya khusus
+    public int Late_Minute { get; set; }
+    public int Late { get; set; }                     // 0/1
+
+    public DateTime? Scan_Date { get; set; }          // optional, tapi SP kamu pakai NOW() untuk scan_date & scan_in
 }
+

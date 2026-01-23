@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Claims;
 using entago_api_mysql.Dtos;
+using entago_api_mysql.Helpers;
 using entago_api_mysql.Services;
 
 namespace entago_api_mysql.Endpoints;
@@ -14,13 +15,23 @@ public static class CheckinEndpoints
 
         // GET /api/checkin/{pegawai_pin}
         group.MapGet("/{pegawai_pin:int}", async (int pegawai_pin, CheckinService svc, CancellationToken ct) =>
-        {
-            var result = await svc.FindShiftResultsByPinAsync(pegawai_pin, ct);
-            if (result is null)
-                return Results.NotFound(new { result = 0, response = "Data Absensi tidak ditemukan!" });
+{
+    var rows = await svc.FindShiftResultsByPinAsync(pegawai_pin, ct);
+    if (rows is null)
+        return Results.NotFound(new { result = 0, response = "Data Absensi tidak ditemukan!" });
 
-            return Results.Ok(result);
-        });
+    var data = rows.Select(x => new ShiftResultResponse(
+        x.Pegawai_Id,
+        x.Pegawai_Pin,
+        // x.Scan_In,
+        //x.Scan_Out,
+        x.Scan_In.ToIndoText(),
+        x.Scan_Out.ToIndoText()
+    ));
+
+    return Results.Ok(new { success = true, message = "Data absensi berhasil dimuat", data });
+});
+
 
         // GET /api/checkin/{pin}/{scan_date} (yyyyMMdd)
         group.MapGet("/{pin:int}/{scan_date}", async (int pin, string scan_date, CheckinService svc, CancellationToken ct) =>
@@ -85,12 +96,12 @@ public static class CheckinEndpoints
             var today = DateTime.Now.Date;
             var exists = await checkinSvc.FindAttLogByPinAndDateAsync(body.Pin, today, ct);
             if (exists is not null && exists.Count >= 1)
-                return Results.Ok(new { result = 7, response = "Anda sudah absen!" });
+                return Results.Ok(new { success = false, result = 2, message = "Anda sudah absen!" });
 
             // Cek izin hari ini
             var izin = await checkinSvc.FindIzinHariIniAsync(body.Pegawai_Id, ct);
             if (izin is not null && izin.Count >= 1)
-                return Results.Ok(new { result = 8, response = "Mohon maaf, hari ini Anda sedang mengajukan Izin!" });
+                return Results.Ok(new { success = false, result = 3, message = "Mohon maaf, hari ini Anda sedang mengajukan Izin!" });
 
             // Aturan jam seperti sistem lama
             var now = DateTime.Now.TimeOfDay;
@@ -111,28 +122,29 @@ public static class CheckinEndpoints
             var end_luar_jam_subuh = new TimeSpan(7, 29, 0);
 
             if ((now > start_terlambat) && (now < end_terlambat))
-                return Results.Ok(new { result = 2, response = "Anda hari ini datang terlambat!" });
+                return Results.Ok(new { success = false, result = 4, message = "Anda hari ini datang terlambat!" });
 
             if ((now > start_luar_jam_siang) && (now < end_luar_jam_siang))
-                return Results.Ok(new { result = 3, response = "Anda berada diluar Jam Absen!" });
+                return Results.Ok(new { success = false, result = 5, message = "Anda berada diluar Jam Absen!" });
 
             if ((now > start_luar_jam_checkout) && (now < end_luar_jam_checkout))
-                return Results.Ok(new { result = 9, response = "Anda berada diluar Jam Absen (checkout)!" });
+                return Results.Ok(new { success = false, result = 6, message = "Anda berada diluar Jam Absen (checkout)!" });
 
-            if ((now > start_luar_jam_malam) && (now < end_luar_jam_malam))
-                return Results.Ok(new { result = 4, response = "Anda berada diluar Jam Absen!" });
+            //if ((now > start_luar_jam_malam) && (now < end_luar_jam_malam))
+            //return Results.Ok(new { success = false,  result = 7, message = "Anda berada diluar Jam Absen!" });
 
-            if ((now > start_luar_jam_subuh) && (now < end_luar_jam_subuh))
-                return Results.Ok(new { result = 5, response = "Anda berada diluar Jam Absen!" });
+            //if ((now > start_luar_jam_subuh) && (now < end_luar_jam_subuh))
+            //  return Results.Ok(new { success = false,  result = 8, message = "Anda berada diluar Jam Absen!" });
 
             // Insert ke att_log
             var scanDate = body.Scan_Date ?? DateTime.Now;
-            await checkinSvc.InsertAttLogAsync(body, scanDate, ct);
+            await checkinSvc.InsertAttLogAsync(body, ct);
 
             return Results.Ok(new
             {
                 result = 1,
-                response = "Anda berhasil absen datang",
+                success = true,
+                message = "Anda berhasil absen datang",
                 scan_in_disimpan_di_storage_hp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
             });
         });

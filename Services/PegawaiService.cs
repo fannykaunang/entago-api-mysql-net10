@@ -5,7 +5,36 @@ namespace entago_api_mysql.Services;
 
 public sealed class PegawaiService(MySqlConnectionFactory factory)
 {
+    public async Task<object?> GetByPinAsync(string pegawaiPin, CancellationToken ct = default)
+    {
+        const string sql = @"
+            SELECT
+            p.pegawai_id, p.pegawai_pin, p.pegawai_nip, p.pegawai_nama,
+            p.tempat_lahir, p.pegawai_privilege, p.pegawai_telp, p.pegawai_status,
+            IFNULL(p.tgl_lahir, '0001-01-01') AS tgl_lahir,
+            IFNULL(pb1.pembagian1_nama, '') AS jabatan,
+            IFNULL(pb2.skpd, '') AS skpd,
+            IFNULL(pb3.pembagian3_nama, '') AS sotk,
+            p.tgl_mulai_kerja, p.gender,
+            p.photo_path,
+            p.no_rek AS deviceid,
+            pb2.latitude,
+            pb2.longitude
+            FROM pegawai p
+            LEFT JOIN pembagian1 pb1 ON pb1.pembagian1_id = p.pembagian1_id
+            LEFT JOIN e_skpd pb2 ON pb2.pembagian2_id = p.pembagian2_id
+            LEFT JOIN pembagian3 pb3 ON pb3.pembagian3_id = p.pembagian3_id
+            WHERE p.pegawai_pin = @pegawaiPin
+            LIMIT 1;";
 
+        await using var conn = factory.Create();
+        await conn.OpenAsync(ct);
+
+        // pakai object dulu biar fleksibel (atau bikin record PegawaiRow)
+        return await conn.QueryFirstOrDefaultAsync(
+            new CommandDefinition(sql, new { pegawaiPin }, cancellationToken: ct)
+        );
+    }
 
     public async Task<IEnumerable<PegawaiDto>> GetAllAsync(CancellationToken ct = default)
     {

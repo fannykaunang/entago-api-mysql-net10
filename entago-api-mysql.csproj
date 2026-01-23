@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>entago_api_mysql</RootNamespace>
+    <NoWarn>$(NoWarn);SYSLIB0060</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

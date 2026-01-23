@@ -9,6 +9,8 @@ public static class ProtectedApiEndpoints
 
         api.MapPegawaiEndpoints();
         api.MapCheckinEndpoints();
+        api.MapCheckoutEndpoints();
+        api.MapIzinListEndpoints();
 
         return app;
     }

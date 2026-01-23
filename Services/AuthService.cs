@@ -1,5 +1,4 @@
 using Dapper;
-using MySqlConnector;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -92,7 +91,6 @@ public sealed class AuthService(MySqlConnectionFactory factory, IConfiguration c
 
         return Convert.ToBase64String(ms.ToArray());
     }
-
 
     public string CreateJwt(UserRow user)
     {

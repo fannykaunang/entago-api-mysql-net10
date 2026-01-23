@@ -41,3 +41,4 @@ E:\Web\entago-api-mysql\bin\Debug\net10.0\Microsoft.IdentityModel.Protocols.dll
 E:\Web\entago-api-mysql\bin\Debug\net10.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
 E:\Web\entago-api-mysql\bin\Debug\net10.0\Microsoft.IdentityModel.Tokens.dll
 E:\Web\entago-api-mysql\bin\Debug\net10.0\System.IdentityModel.Tokens.Jwt.dll
+E:\Web\entago-api-mysql\obj\Debug\net10.0\entago-api-mysql.sourcelink.json

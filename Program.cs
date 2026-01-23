@@ -12,7 +12,10 @@ builder.Services.AddSingleton<MySqlConnectionFactory>();
 builder.Services.AddScoped<ApiClientService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<PegawaiService>();
-builder.Services.AddScoped<CheckinService>(); // ✅ WAJIB
+builder.Services.AddScoped<CheckinService>();
+builder.Services.AddScoped<CheckoutService>();
+builder.Services.AddScoped<IzinListService>();
+
 builder.Services.AddMemoryCache();
 
 // JWT

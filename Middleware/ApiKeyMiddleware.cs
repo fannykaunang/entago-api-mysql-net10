@@ -57,6 +57,30 @@ public sealed class ApiKeyMiddleware(RequestDelegate next)
             return;
         }
 
+        // Rate limit khusus login (lebih ketat)
+        if (ctx.Request.Path.Equals("/api/auth/login", StringComparison.OrdinalIgnoreCase))
+        {
+            var ip = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var loginKey = $"rl:login:{client.Id}:{ip}:{DateTime.UtcNow:yyyyMMddHHmm}";
+
+            var loginCount = cache.GetOrCreate(loginKey, e =>
+            {
+                e.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
+                return 0;
+            });
+
+            loginCount++;
+            cache.Set(loginKey, loginCount, TimeSpan.FromMinutes(1));
+
+            // contoh: 10 request/menit per IP per client untuk login
+            if (loginCount > 10)
+            {
+                ctx.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                await ctx.Response.WriteAsJsonAsync(new { success = false, message = "Too many login attempts" }, ct);
+                return;
+            }
+        }
+
         // Rate limit per menit (in-memory)
         if (client.Rate_Limit > 0)
         {
@@ -80,6 +104,9 @@ public sealed class ApiKeyMiddleware(RequestDelegate next)
 
         ctx.Items["ApiClient"] = client;
         ctx.Items["ApiClientId"] = client.Id;
+
+        ctx.Items["ApiClientPrefix"] = client.Prefix;
+        ctx.Items["ApiClientRateLimit"] = client.Rate_Limit;
 
         await next(ctx);
     }
