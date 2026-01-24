@@ -17,7 +17,6 @@ public static class AuthEndpoints
             IMemoryCache cache,
             CancellationToken ct) =>
         {
-
             var apiClientId = ctx.Items["ApiClientId"]?.ToString() ?? "0";
             var ip = ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             var email = (req.Email ?? "").Trim().ToLowerInvariant();

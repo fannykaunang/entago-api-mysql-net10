@@ -30,9 +30,6 @@ public static class IzinListEndpoints
 
             var data = await svc.GetListByPegawaiIdAsync(pegawai_id, ct);
 
-            if (data.Count == 0)
-                return Results.NoContent(); // 204, sama seperti controller lama
-
             return Results.Ok(new { success = true, message = "List izin berhasil dimuat", data });
         });
 

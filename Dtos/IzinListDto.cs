@@ -8,7 +8,7 @@ public sealed class IzinListDto
     public DateTime? Izin_Tgl_Pengajuan { get; set; }
     public DateTime? Izin_Tgl { get; set; }
 
-    public short Izin_Jenis_Id { get; set; }      // MySQL smallint -> short
+    public short Izin_Jenis_Id { get; set; }
     public string Izin_Jenis_Name { get; set; } = "";
 
     public string? Kat_Izin_Nama { get; set; }
