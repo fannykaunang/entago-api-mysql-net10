@@ -11,6 +11,8 @@ public static class ProtectedApiEndpoints
         api.MapCheckinEndpoints();
         api.MapCheckoutEndpoints();
         api.MapIzinListEndpoints();
+        api.MapMonthlyReportEndpoints();
+        api.MapTugasLuarEndpoints();
 
         return app;
     }
