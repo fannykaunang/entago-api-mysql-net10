@@ -37,3 +37,14 @@ public sealed class TugasLuarCreateForm
     public string Longitude { get; set; } = "";
     public IFormFile Foto { get; set; } = default!;
 }
+
+public sealed class TugasLuarUpdateForm
+{
+    public DateTime? Tugas_Tgl { get; set; }          // opsional (kalau mau bisa diubah)
+    public string? Tujuan { get; set; }
+    public string? Keterangan_Tugas { get; set; }
+    public string? Alamat { get; set; }
+    public string? Latitude { get; set; }
+    public string? Longitude { get; set; }
+    public IFormFile? Foto { get; set; }              // opsional
+}

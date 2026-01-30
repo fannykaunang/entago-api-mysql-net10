@@ -1,3 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using entago_api_mysql.Dtos;
 using entago_api_mysql.Services;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -69,6 +72,57 @@ public static class AuthEndpoints
                 }
             });
         });
+
+
+        // PUT /api/auth/change-password
+        // Header: Authorization: Bearer <token>
+        _ = group.MapPut("/change-password", async (
+            HttpContext ctx,
+            ChangePasswordRequest req,
+            AuthService auth,
+            CancellationToken ct) =>
+        {
+            // ambil userid dari JWT (sub)
+            var pin = ctx.User.FindFirstValue("pin");
+            if (string.IsNullOrWhiteSpace(pin))
+                return Results.Unauthorized();
+
+            if (string.IsNullOrWhiteSpace(req.OldPassword) || string.IsNullOrWhiteSpace(req.NewPassword))
+                return Results.BadRequest(new { success = false, message = "OldPassword dan NewPassword wajib diisi." });
+
+            if (req.NewPassword.Length < 6)
+                return Results.BadRequest(new { success = false, message = "Password baru minimal 6 karakter." });
+
+            if (req.NewPassword == req.OldPassword)
+                return Results.BadRequest(new { success = false, message = "Password baru tidak boleh sama dengan password lama." });
+
+            // ambil user dari DB
+            var user = await auth.FindActiveUserByPinAsync(pin, ct);
+
+            if (user is null)
+            {
+                Console.WriteLine($"[ChangePassword] User tidak ditemukan. userId={pin}");
+                return Results.Unauthorized();
+            }
+
+            //Console.WriteLine($"[ChangePassword] userId={user.Pin} email={user.Email} pin={user.Pin}");
+
+
+            // verifikasi password lama
+            if (!auth.VerifyPassword(req.OldPassword, user.Pwd))
+                return Results.Json(new { success = false, message = "Password lama salah." }, statusCode: 401);
+
+            // hash/encrypt password baru (legacy)
+            var newPwd = auth.HashPasswordLikeLegacy(req.NewPassword);
+
+            // update
+            var affected = await auth.UpdatePasswordAsync(pin, newPwd, ct);
+            if (affected <= 0)
+                return Results.Problem("Gagal update password.", statusCode: 500);
+
+            return Results.Ok(new { success = true, message = "Password berhasil diperbarui." });
+        })
+        .RequireAuthorization(); // ✅ wajib JWT
 
         return app;
     }

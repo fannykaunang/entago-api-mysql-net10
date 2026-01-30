@@ -6,12 +6,13 @@ public sealed class ShiftResultDto
     public int Pegawai_Pin { get; set; }
     public DateTime? Scan_In { get; set; }
     public DateTime? Scan_Out { get; set; }
+    public string Hari { get; set; } = "";
 }
 
 public sealed class AttLogDto
 {
     public string Sn { get; set; } = "";
-    public DateTime Scan_Date { get; set; }
+    public string Scan_Date { get; set; } = "";
     public int Pin { get; set; }
     public int Verifymode { get; set; }
     public int Inoutmode { get; set; }

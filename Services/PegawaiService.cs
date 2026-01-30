@@ -19,7 +19,8 @@ public sealed class PegawaiService(MySqlConnectionFactory factory)
             p.photo_path,
             p.no_rek AS deviceid,
             pb2.latitude,
-            pb2.longitude
+            pb2.longitude,
+            pb2.sn
             FROM pegawai p
             LEFT JOIN pembagian1 pb1 ON pb1.pembagian1_id = p.pembagian1_id
             LEFT JOIN e_skpd pb2 ON pb2.pembagian2_id = p.pembagian2_id
@@ -34,6 +35,14 @@ public sealed class PegawaiService(MySqlConnectionFactory factory)
         return await conn.QueryFirstOrDefaultAsync(
             new CommandDefinition(sql, new { pegawaiPin }, cancellationToken: ct)
         );
+    }
+
+    public async Task<int> GetPegawaiIdByPinAsync(string pin, CancellationToken ct)
+    {
+        const string sql = @"SELECT pegawai_id FROM pegawai WHERE pegawai_pin = @pin LIMIT 1;";
+        await using var conn = factory.Create();
+        await conn.OpenAsync(ct);
+        return await conn.QueryFirstOrDefaultAsync<int>(new CommandDefinition(sql, new { pin }, cancellationToken: ct));
     }
 
     public async Task<IEnumerable<PegawaiDto>> GetAllAsync(CancellationToken ct = default)

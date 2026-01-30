@@ -122,4 +122,47 @@ public sealed class AuthService(MySqlConnectionFactory factory, IConfiguration c
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    public async Task<UserRow?> FindActiveUserByPinAsync(string pin, CancellationToken ct = default)
+    {
+        const string sql = @"
+SELECT
+  userid AS Userid,
+  skpdid AS Skpdid,
+  pin AS Pin,
+  email AS Email,
+  pwd AS Pwd,
+  level AS Level,
+  user_status AS User_Status,
+  is_verified AS Is_Verified,
+  deviceid AS Deviceid
+FROM e_user
+WHERE pin = @pin
+LIMIT 1;";
+
+        await using var conn = factory.Create();
+        await conn.OpenAsync(ct);
+
+        var user = await conn.QueryFirstOrDefaultAsync<UserRow>(
+            new CommandDefinition(sql, new { pin }, cancellationToken: ct)
+        );
+
+        if (user is null) return null;
+        if (user.User_Status != 1) return null;
+        if (user.Is_Verified != 1) return null;
+
+        return user;
+    }
+
+    public string HashPasswordLikeLegacy(string clearPassword)
+        => EncryptLikeLegacy(clearPassword); // pakai method existing kamu
+
+    public async Task<int> UpdatePasswordAsync(string pin, string newPwdBase64, CancellationToken ct = default)
+    {
+        const string sql = @"UPDATE e_user SET pwd = @newPwd WHERE pin = @pin LIMIT 1;";
+        await using var conn = factory.Create();
+        await conn.OpenAsync(ct);
+
+        return await conn.ExecuteAsync(new CommandDefinition(sql, new { pin, newPwd = newPwdBase64 }, cancellationToken: ct));
+    }
 }

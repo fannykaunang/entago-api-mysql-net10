@@ -26,24 +26,47 @@ public static class CheckinEndpoints
         // x.Scan_In,
         //x.Scan_Out,
         x.Scan_In.ToIndoText(),
-        x.Scan_Out.ToIndoText()
+        x.Scan_Out.ToIndoText(),
+        x.Hari
     ));
 
     return Results.Ok(new { success = true, message = "Data absensi berhasil dimuat", data });
 });
 
 
-        // GET /api/checkin/{pin}/{scan_date} (yyyyMMdd)
-        group.MapGet("/{pin:int}/{scan_date}", async (int pin, string scan_date, CheckinService svc, CancellationToken ct) =>
+        group.MapGet("/today", async (
+            HttpContext ctx,
+            PegawaiService svc,
+CheckinService svccin,
+            CancellationToken ct) =>
         {
-            if (!DateTime.TryParseExact(scan_date, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
-                return Results.BadRequest(new { success = false, message = "Format scan_date harus yyyyMMdd" });
+            // ambil pin dari JWT
+            var pin = ctx.User.FindFirstValue("pin");
+            if (string.IsNullOrWhiteSpace(pin))
+                return Results.Unauthorized();
 
-            var result = await svc.FindAttLogByPinAndDateAsync(pin, dt, ct);
-            if (result is null) return Results.NotFound();
+            // resolve pegawai_id
+            var pegawaiId = await svc.GetPegawaiIdByPinAsync(pin, ct);
+            if (pegawaiId <= 0)
+                return Results.Unauthorized();
 
-            return Results.Ok(result);
-        });
+            // ambil data shift_result hari ini
+            var data = await svccin.GetTodayShiftResultAsync(pegawaiId, ct);
+            if (data is null)
+                return Results.NotFound(new
+                {
+                    success = false,
+                    message = "Data shift_result hari ini belum tersedia."
+                });
+
+            return Results.Ok(new
+            {
+                success = true,
+                message = "Data checkin/checkout hari ini berhasil dimuat",
+                data
+            });
+        })
+        .RequireAuthorization(); // kalau grup kamu belum otomatis require
 
         // GET /api/checkin/morning-checkin?pin=1813&date=2025-01-08 (yyyy-MM-dd)
         group.MapGet("/morning-checkin", async (int pin, string date, CheckinService svc, CancellationToken ct) =>
@@ -130,11 +153,11 @@ public static class CheckinEndpoints
             if ((now > start_luar_jam_checkout) && (now < end_luar_jam_checkout))
                 return Results.Ok(new { success = false, result = 6, message = "Anda berada diluar Jam Absen (checkout)!" });
 
-            //if ((now > start_luar_jam_malam) && (now < end_luar_jam_malam))
-            //return Results.Ok(new { success = false,  result = 7, message = "Anda berada diluar Jam Absen!" });
+            if ((now > start_luar_jam_malam) && (now < end_luar_jam_malam))
+                return Results.Ok(new { success = false, result = 7, message = "Anda berada diluar Jam Absen (ci malam)!" });
 
-            //if ((now > start_luar_jam_subuh) && (now < end_luar_jam_subuh))
-            //  return Results.Ok(new { success = false,  result = 8, message = "Anda berada diluar Jam Absen!" });
+            if ((now > start_luar_jam_subuh) && (now < end_luar_jam_subuh))
+                return Results.Ok(new { success = false, result = 8, message = "Anda berada diluar Jam Absen (ci subuh)!" });
 
             // Insert ke att_log
             var scanDate = body.Scan_Date ?? DateTime.Now;

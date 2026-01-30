@@ -34,7 +34,20 @@ public sealed class CheckinService(MySqlConnectionFactory factory)
             p.pegawai_id AS Pegawai_Id,
             p.pegawai_pin AS Pegawai_Pin,
             CASE WHEN sr.scan_in  < '1000-01-01' THEN NULL ELSE sr.scan_in  END AS Scan_In,
-            CASE WHEN sr.scan_out < '1000-01-01' THEN NULL ELSE sr.scan_out END AS Scan_Out
+            CASE WHEN sr.scan_out < '1000-01-01' THEN NULL ELSE sr.scan_out END AS Scan_Out,
+            CASE WHEN CAST(sr.tgl_shift AS CHAR(19)) = '0000-00-00 00:00:00' THEN ''
+        ELSE
+            CASE DAYNAME(STR_TO_DATE(CAST(sr.tgl_shift AS CHAR(19)), '%Y-%m-%d %H:%i:%s'))
+                WHEN 'Sunday' THEN 'Minggu'
+                WHEN 'Monday' THEN 'Senin'
+                WHEN 'Tuesday' THEN 'Selasa'
+                WHEN 'Wednesday' THEN 'Rabu'
+                WHEN 'Thursday' THEN 'Kamis'
+                WHEN 'Friday' THEN 'Jumat'
+                WHEN 'Saturday' THEN 'Sabtu'
+                ELSE ''
+            END
+    END AS Hari
             FROM shift_result sr
             INNER JOIN pegawai p ON sr.pegawai_id = p.pegawai_id
             WHERE p.pegawai_pin = @pegawai_pin
@@ -53,27 +66,64 @@ public sealed class CheckinService(MySqlConnectionFactory factory)
     public async Task<List<AttLogDto>?> FindAttLogByPinAndDateAsync(int pin, DateTime date, CancellationToken ct = default)
     {
         const string sql = @"
-            SELECT
-            sn AS Sn,
-            scan_date AS Scan_Date,
-            pin AS Pin,
-            verifymode AS Verifymode,
-            inoutmode AS Inoutmode,
-            reserved AS Reserved,
-            work_code AS Work_Code,
-            att_id AS Att_Id
-            FROM att_log
-            WHERE pin = @pin
-            AND DATE(scan_date) = @scan_date;";
+SELECT
+    al.sn AS Sn,
+    CASE
+        WHEN CAST(al.scan_date AS CHAR(19)) = '0000-00-00 00:00:00' THEN ''
+        ELSE DATE_FORMAT(al.scan_date, '%d %b %Y %H:%i')
+    END AS Scan_Date,
+    al.pin AS Pin,
+    al.verifymode AS Verifymode,
+    al.inoutmode AS Inoutmode,
+    al.reserved AS Reserved,
+    al.work_code AS Work_Code,
+    al.att_id AS Att_Id
+FROM att_log al
+WHERE al.pin = @pin
+  AND al.scan_date >= @start
+  AND al.scan_date <  @end
+ORDER BY al.scan_date DESC;";
+
+        var start = date.Date;
+        var end = start.AddDays(1);
 
         await using var conn = factory.Create();
         await conn.OpenAsync(ct);
 
         var rows = (await conn.QueryAsync<AttLogDto>(
-            new CommandDefinition(sql, new { pin, scan_date = date.Date }, cancellationToken: ct)
+            new CommandDefinition(sql, new { pin, start, end }, cancellationToken: ct)
         )).AsList();
 
         return rows.Count == 0 ? null : rows;
+    }
+
+    public async Task<ShiftResultTodayDto?> GetTodayShiftResultAsync(int pegawaiId, CancellationToken ct = default)
+    {
+        const string sql = @"
+SELECT
+  sr.pegawai_id AS Pegawai_Id,
+  sr.tgl_shift AS Tgl_Shift,
+  CASE
+    WHEN CAST(sr.scan_in AS CHAR(19)) = '0000-00-00 00:00:00' THEN ''
+    WHEN TIME(sr.scan_in) > '09:00:00'
+      THEN CONCAT(DATE_FORMAT(sr.scan_in, '%H:%i'), ' (Terlambat)')
+    ELSE DATE_FORMAT(sr.scan_in, '%H:%i')
+  END AS Checkin,
+  CASE
+    WHEN CAST(sr.scan_out AS CHAR(19)) = '0000-00-00 00:00:00' THEN ''
+    ELSE DATE_FORMAT(sr.scan_out, '%H:%i')
+  END AS Checkout
+FROM shift_result sr
+WHERE sr.pegawai_id = @pegawaiId
+  AND sr.tgl_shift = CURDATE()
+LIMIT 1;";
+
+        await using var conn = factory.Create();
+        await conn.OpenAsync(ct);
+
+        return await conn.QueryFirstOrDefaultAsync<ShiftResultTodayDto>(
+            new CommandDefinition(sql, new { pegawaiId }, cancellationToken: ct)
+        );
     }
 
     public async Task<DateTime?> GetMorningCheckinByPinAndDateAsync(int pin, DateTime date, CancellationToken ct = default)

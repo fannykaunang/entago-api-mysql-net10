@@ -142,4 +142,80 @@ SELECT LAST_INSERT_ID();";
 
         return id;
     }
+
+    public async Task<TugasLuarDto?> GetByIdForOwnerAsync(int tugasLuarId, int pegawaiId, CancellationToken ct)
+    {
+        const string sql = @"
+SELECT
+  tugas_luar_id   AS Tugas_Luar_Id,
+  pegawai_id      AS Pegawai_Id,
+  tugas_tgl       AS Tugas_Tgl,
+  tujuan          AS Tujuan,
+  keterangan_tugas AS Keterangan_Tugas,
+  alamat          AS Alamat,
+  latitude        AS Latitude,
+  longitude       AS Longitude,
+  is_verified     AS Is_Verified,
+  file_name       AS File_Name,
+  file_extension  AS File_Extension,
+  file_size       AS File_Size,
+  file_path       AS File_Path
+FROM e_tugas_luar
+WHERE tugas_luar_id = @tugasLuarId
+  AND pegawai_id = @pegawaiId
+LIMIT 1;";
+
+        await using var conn = _factory.Create();
+        await conn.OpenAsync(ct);
+
+        return await conn.QueryFirstOrDefaultAsync<TugasLuarDto>(
+            new CommandDefinition(sql, new { tugasLuarId, pegawaiId }, cancellationToken: ct)
+        );
+    }
+
+    public async Task<int> UpdateIfStatusBaruAsync(
+        int tugasLuarId,
+        int pegawaiId,
+        TugasLuarUpdateForm form,
+        (string fileName, string ext, long size, string publicPath)? newFile,
+        CancellationToken ct)
+    {
+        // update hanya status 2 + milik sendiri
+        const string sql = @"
+UPDATE e_tugas_luar
+SET
+  tujuan = COALESCE(@tujuan, tujuan),
+  keterangan_tugas = COALESCE(@keterangan_tugas, keterangan_tugas),
+  alamat = COALESCE(@alamat, alamat),
+  latitude = COALESCE(@latitude, latitude),
+  longitude = COALESCE(@longitude, longitude),
+  file_name = COALESCE(@file_name, file_name),
+  file_extension = COALESCE(@file_extension, file_extension),
+  file_size = COALESCE(@file_size, file_size),
+  file_path = COALESCE(@file_path, file_path)
+WHERE tugas_luar_id = @tugasLuarId
+  AND pegawai_id = @pegawaiId
+  AND is_verified = 2;";
+
+        var p = new
+        {
+            tugasLuarId,
+            pegawaiId,
+            tujuan = form.Tujuan,
+            keterangan_tugas = form.Keterangan_Tugas,
+            alamat = form.Alamat,
+            latitude = form.Latitude,
+            longitude = form.Longitude,
+            file_name = newFile?.fileName,
+            file_extension = newFile?.ext,
+            file_size = newFile is null ? null : newFile.Value.size.ToString(),
+            file_path = newFile?.publicPath
+        };
+
+        await using var conn = _factory.Create();
+        await conn.OpenAsync(ct);
+
+        return await conn.ExecuteAsync(new CommandDefinition(sql, p, cancellationToken: ct));
+        // return = rows affected (0 berarti gagal: bukan milik user / status bukan 2 / id tidak ada)
+    }
 }
