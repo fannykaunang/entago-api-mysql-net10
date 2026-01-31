@@ -26,6 +26,7 @@ builder.Services.Configure<FormOptions>(o =>
 builder.Services.Configure<UploadOptions>(builder.Configuration.GetSection("Uploads"));
 builder.Services.AddScoped<TugasLuarService>();
 builder.Services.AddScoped<FileUploadService>();
+builder.Services.AddScoped<MonitorService>();
 
 builder.Services.AddMemoryCache();
 

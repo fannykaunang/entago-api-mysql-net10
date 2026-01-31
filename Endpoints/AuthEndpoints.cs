@@ -11,6 +11,7 @@ public static class AuthEndpoints
     public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/auth");
+        //var group = app.MapGroup("/auth");
 
         // POST /api/auth/login
         _ = group.MapPost("/login", async (

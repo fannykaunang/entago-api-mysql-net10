@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("entago-api-mysql")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c2eff90cb5f8fd7edee9181b7593a3504c0730ca")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1f78ee20ffce7ee1d88ec159e521caae00ef3384")]
 [assembly: System.Reflection.AssemblyProductAttribute("entago-api-mysql")]
 [assembly: System.Reflection.AssemblyTitleAttribute("entago-api-mysql")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
